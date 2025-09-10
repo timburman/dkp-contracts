@@ -60,7 +60,7 @@ contract DKPTest is Test {
     }
 
     function test_VoteEmit() public {
-        uint id = submissionOfContent();
+        uint256 id = submissionOfContent();
 
         vm.prank(voter1);
         vm.expectEmit();
@@ -69,7 +69,7 @@ contract DKPTest is Test {
     }
 
     function test_FailVoteTwice() public {
-        uint id = submissionOfContent();
+        uint256 id = submissionOfContent();
 
         vm.prank(voter1);
         dkp.vote(id, true);
@@ -79,7 +79,7 @@ contract DKPTest is Test {
         dkp.vote(id, false);
     }
 
-    function test_FailVoteOnExistentSubmission(uint randomId) public {
+    function test_FailVoteOnExistentSubmission(uint256 randomId) public {
         vm.assume(randomId != 1);
         submissionOfContent();
 
