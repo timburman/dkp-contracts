@@ -19,10 +19,10 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     uint256 public idCounter;
 
     // -- Mappings --
-    mapping(uint256 => Submission) public submissions;
+    mapping(uint256 => Submission) internal submissions;
 
     // Mapping SubmissionId => (Voter => hasVoted)
-    mapping(uint256 => mapping(address => bool)) public hasVoted;
+    mapping(uint256 => mapping(address => bool)) internal hasVoted;
 
     // -- Events --
     event ContentSubmitted(uint256 Id, address indexed author);
@@ -53,7 +53,7 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     function vote(uint256 submissionId, bool _isUpvote) external nonReentrant {
         Submission storage s = submissions[submissionId];
 
-        require(s.id == submissionId, "Invalid Submission Id");
+        require(s.id == submissionId && s.id != 0, "Invalid Submission Id");
         require(hasVoted[submissionId][msg.sender] == false, "Already Voted");
 
         hasVoted[submissionId][msg.sender] = true;
