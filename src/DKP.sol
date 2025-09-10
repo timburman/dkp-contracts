@@ -6,42 +6,37 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-
 contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
-
     struct Submission {
-        uint id;
+        uint256 id;
         bytes32 contentHash;
         address author;
-        uint timestamp;
-        uint upVotes;
-        uint downVotes;
+        uint256 timestamp;
+        uint256 upVotes;
+        uint256 downVotes;
     }
 
-    uint public idCounter;
+    uint256 public idCounter;
 
     // -- Mappings --
-    mapping(uint => Submission) public submissions;
+    mapping(uint256 => Submission) public submissions;
 
     // Mapping SubmissionId => (Voter => hasVoted)
-    mapping(uint => mapping(address => bool))  public hasVoted;
+    mapping(uint256 => mapping(address => bool)) public hasVoted;
 
     // -- Events --
-    event ContentSubmitted(uint Id, address indexed author);
-    event Voted(uint Id, address indexed user);
-
+    event ContentSubmitted(uint256 Id, address indexed author);
+    event Voted(uint256 Id, address indexed user);
 
     // Initializer
     function initialize(address initialOwner) public initializer {
         __Ownable_init(initialOwner);
         __ReentrancyGuard_init();
-        idCounter = 0;
     }
 
     // Public and External functions
 
-    function submitContent(bytes32 _contentHash) public returns(uint id) {
-
+    function submitContent(bytes32 _contentHash) public returns (uint256 id) {
         idCounter++;
         Submission storage s = submissions[idCounter];
 
@@ -49,13 +44,13 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         s.contentHash = _contentHash;
         s.author = msg.sender;
         s.timestamp = block.timestamp;
-        
+
         emit ContentSubmitted(idCounter, msg.sender);
 
         return idCounter;
     }
 
-    function vote(uint submissionId, bool _isUpvote) external  nonReentrant{
+    function vote(uint256 submissionId, bool _isUpvote) external nonReentrant {
         Submission storage s = submissions[submissionId];
 
         require(s.id == submissionId, "Invalid Submission Id");
@@ -72,4 +67,8 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         emit Voted(submissionId, msg.sender);
     }
 
+    // -- View Functions --
+    function getSubmissions(uint256 submissionId) external view returns (Submission memory) {
+        return submissions[submissionId];
+    }
 }
