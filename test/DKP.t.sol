@@ -11,6 +11,9 @@ contract DKPTest is Test {
     address public voter2 = makeAddr("voter2");
     DKP public dkp;
 
+    event ContentSubmitted(uint256 Id, address indexed author);
+    event Voted(uint256 Id, address indexed user);
+
     function setUp() public {
         dkp = new DKP();
 
@@ -18,12 +21,12 @@ contract DKPTest is Test {
     }
 
     function submissionOfContent() public returns (uint256 id) {
-        bytes32 _contentHash = bytes32("Lalala");
+        bytes32 _contentHash = keccak256("Lalala");
         vm.prank(user);
         id = dkp.submitContent(_contentHash);
     }
 
-    function testSubmitContent(bytes32 _contentHash) public {
+    function test_SubmitContent(bytes32 _contentHash) public {
         vm.prank(user);
         uint256 id = dkp.submitContent(_contentHash);
 
@@ -34,7 +37,14 @@ contract DKPTest is Test {
         assertEq(user, s.author);
     }
 
-    function testVoting() public {
+    function test_SubmissionEmit() public {
+        vm.prank(user);
+        vm.expectEmit();
+        emit ContentSubmitted(1, user);
+        dkp.submitContent(keccak256("Yolo"));
+    }
+
+    function test_Voting() public {
         uint256 id = submissionOfContent();
 
         vm.prank(voter1);
@@ -47,5 +57,34 @@ contract DKPTest is Test {
 
         assertEq(s.upVotes, 2);
         assertEq(s.downVotes, 0);
+    }
+
+    function test_VoteEmit() public {
+        uint id = submissionOfContent();
+
+        vm.prank(voter1);
+        vm.expectEmit();
+        emit Voted(id, voter1);
+        dkp.vote(id, true);
+    }
+
+    function test_FailVoteTwice() public {
+        uint id = submissionOfContent();
+
+        vm.prank(voter1);
+        dkp.vote(id, true);
+
+        vm.prank(voter1);
+        vm.expectRevert("Already Voted");
+        dkp.vote(id, false);
+    }
+
+    function test_FailVoteOnExistentSubmission(uint randomId) public {
+        vm.assume(randomId != 1);
+        submissionOfContent();
+
+        vm.prank(voter1);
+        vm.expectRevert("Invalid Submission Id");
+        dkp.vote(randomId, true);
     }
 }
