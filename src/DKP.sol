@@ -71,4 +71,8 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     function getSubmissions(uint256 submissionId) external view returns (Submission memory) {
         return submissions[submissionId];
     }
+
+    function getHasVoted(uint256 submissionId, address user) external view returns (bool) {
+        return hasVoted[submissionId][user];
+    }
 }
