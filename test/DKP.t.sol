@@ -11,8 +11,8 @@ contract DKPTest is Test {
     address public voter2 = makeAddr("voter2");
     DKP public dkp;
 
-    event ContentSubmitted(uint256 Id, address indexed author);
-    event Voted(uint256 Id, address indexed user);
+    event ContentSubmitted(uint256 indexed Id, address indexed author);
+    event Voted(uint256 indexed Id, address indexed user);
 
     function setUp() public {
         dkp = new DKP();
@@ -24,6 +24,15 @@ contract DKPTest is Test {
         bytes32 _contentHash = keccak256("Lalala");
         vm.prank(user);
         id = dkp.submitContent(_contentHash);
+    }
+
+    function test_IdCounter() public {
+        assertEq(dkp.getCurrentId(), 1);
+
+        vm.prank(user);
+        dkp.submitContent(keccak256("Lalalal"));
+
+        assertEq(dkp.getCurrentId(), 2);
     }
 
     function test_SubmitContent(bytes32 _contentHash) public {
@@ -39,7 +48,7 @@ contract DKPTest is Test {
 
     function test_SubmissionEmit() public {
         vm.prank(user);
-        vm.expectEmit();
+        vm.expectEmit(true, true, false, false);
         emit ContentSubmitted(1, user);
         dkp.submitContent(keccak256("Yolo"));
     }
@@ -63,7 +72,7 @@ contract DKPTest is Test {
         uint256 id = submissionOfContent();
 
         vm.prank(voter1);
-        vm.expectEmit();
+        vm.expectEmit(true, true, false, false);
         emit Voted(id, voter1);
         dkp.vote(id, true);
     }
@@ -79,7 +88,7 @@ contract DKPTest is Test {
         dkp.vote(id, false);
     }
 
-    function test_FailVoteOnExistentSubmission(uint256 randomId) public {
+    function test_FailVoteOnNonExistentSubmission(uint256 randomId) public {
         vm.assume(randomId != 1);
         submissionOfContent();
 
