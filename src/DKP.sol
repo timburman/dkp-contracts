@@ -39,7 +39,7 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
     // Public and External functions
 
     function submitContent(bytes32 _contentHash) public returns (uint256 id) {
-        uint newId = _idCounter++;
+        uint256 newId = _idCounter++;
         Submission storage s = submissions[newId];
 
         s.id = newId;
@@ -74,7 +74,7 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
         return submissions[submissionId];
     }
 
-    function getCurrentId() external view returns (uint) {
+    function getCurrentId() external view returns (uint256) {
         return _idCounter;
     }
 
