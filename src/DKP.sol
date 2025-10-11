@@ -8,6 +8,14 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "./DKPToken.sol";
 
 contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, UUPSUpgradeable {
+    enum SubmissionStatus {
+        Pending,
+        InReview,
+        Verified,
+        Rejected,
+        Claimed
+    }
+
     struct Submission {
         uint256 id;
         bytes32 contentHash;
@@ -16,6 +24,9 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
         uint256 upVotes;
         uint256 downVotes;
         uint256 boostAmount;
+        uint256 totalVoteWeight;
+        uint256 reviewEndTime;
+        SubmissionStatus status;
     }
 
     uint256 private _idCounter;
@@ -68,13 +79,14 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
 
         require(s.id == submissionId && s.id != 0, "Invalid Submission Id");
         require(hasVoted[submissionId][msg.sender] == false, "Already Voted");
+        require(
+            s.status == SubmissionStatus.Pending || s.status == SubmissionStatus.InReview, "DKP: Voting period is over"
+        );
 
-        hasVoted[submissionId][msg.sender] = true;
+        uint256 voteWeight = reputationScore[msg.sender];
 
-        if (_isUpvote) {
-            s.upVotes++;
-        } else {
-            s.downVotes++;
+        if (voteWeight == 0) {
+            voteWeight = 1;
         }
 
         emit Voted(submissionId, msg.sender);
