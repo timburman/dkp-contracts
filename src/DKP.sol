@@ -34,6 +34,7 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
         uint256 boostAmount;
         uint256 totalVoteWeight;
         uint256 reviewEndTime;
+        bool rewardClaimed;
         SubmissionStatus status;
     }
 
@@ -153,6 +154,7 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
     function claimRewards(uint256 submissionId) external {
         Submission storage s = submissions[submissionId];
         require(msg.sender == s.author, "DKP: Not the author");
+        require(s.rewardClaimed == false, "DKP: Reward already claimed");
         require(s.status == SubmissionStatus.Verified, "DKP: Submission not verified");
 
         if (block.timestamp >= s.reviewEndTime) {
