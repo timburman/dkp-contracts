@@ -8,6 +8,14 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "./DKPToken.sol";
 
 contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, UUPSUpgradeable {
+    // Enums
+
+    enum VoteChoice {
+        None,
+        Up,
+        Down
+    }
+
     enum SubmissionStatus {
         Pending,
         InReview,
@@ -41,10 +49,23 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
     // Mapping Reputation Score: (Voter => Score)
     mapping(address => uint256) public reputationScore;
 
+    // Mapping to store each voter's voting choice. (submissionId => (Voter => VoteChoice))
+    mapping(uint256 => mapping(address => VoteChoice)) public userVotes;
+
+    // Mapping to store reputation locked in a vote. (submissionId => (Voter => amountLocked))
+    mapping(uint256 => mapping(address => uint256)) public lockedReputation;
+
+    // Mapping to store the total votes of each voter
+    mapping(address => uint256) public voterVoteCount;
+
     // -- Events --
     event ContentSubmitted(uint256 indexed Id, address indexed author);
     event Voted(uint256 indexed Id, address indexed user);
     event SubmissionBoosted(address indexed user, uint256 indexed Id, uint256 boostAmount);
+
+    // Constants
+    uint256 public constant VOTE_STAKE_AMOUNT = 5;
+    uint256 public constant CORRECT_VOTE_REWARD = 7;
 
     // Initializer
     function initialize(address initialOwner, address dkpTokenAddress) public initializer {
@@ -86,7 +107,7 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
         uint256 voteWeight = reputationScore[msg.sender];
 
         if (voteWeight == 0) {
-            voteWeight = 1;
+            voteWeight = 10;
         }
 
         emit Voted(submissionId, msg.sender);
@@ -110,6 +131,19 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
 
     function getCurrentId() external view returns (uint256) {
         return _idCounter;
+    }
+
+    // -- Pure Functions --
+    function calculateRepuationReward(uint256 reputationStake) public pure returns (uint256 bonusAmount) {
+        uint256 x1 = 5;
+        uint256 x2 = 50;
+
+        uint256 p1 = 4000; // 40% at min 5 using basisPoints
+        uint256 p2 = 2000; // 20% at max 50 using basisPoints
+
+        uint256 bonusPercentage = p1 - ((reputationStake - x1) * (p1 - p2)) / (x2 - x1);
+
+        bonusAmount = (reputationStake * bonusPercentage) / 10000;
     }
 
     // -- Upgradable Functionality --
