@@ -102,7 +102,7 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
         uint256 userReputationScore = getReputationScore(msg.sender);
 
         require(
-            voteWeight >= VOTE_STAKE_AMOUNT_MIN && voteWeight <= VOTE_STAKE_AMOUNT_MIN,
+            voteWeight >= VOTE_STAKE_AMOUNT_MIN && voteWeight <= VOTE_STAKE_AMOUNT_MAX,
             "DKP: Voting Weight out of range 5 to 50"
         );
         require(voteWeight <= userReputationScore, "DKP: Not enough reputation");
@@ -161,6 +161,29 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
             finalizeVote(submissionId);
         } else {
             require(false, "DKP: Review period not over");
+        }
+    }
+
+    function reclaimReputation(uint256 submissionId) external {
+        Submission storage s = submissions[submissionId];
+        require(
+            s.status == SubmissionStatus.Verified || s.status == SubmissionStatus.Rejected,
+            "DKP: Submission not finalized"
+        );
+
+        uint256 reputationStakedAmount = lockedReputation[submissionId][msg.sender];
+        require(reputationStakedAmount > 0, "DKP: No reputation staked");
+
+        VoteChoice userVote = userVotes[submissionId][msg.sender];
+        bool votedCorrectly = (s.status == SubmissionStatus.Verified && userVote == VoteChoice.Up)
+            || (s.status == SubmissionStatus.Rejected && userVote == VoteChoice.Down);
+
+        lockedReputation[submissionId][msg.sender] = 0;
+
+        if (votedCorrectly) {
+            reputationScore[msg.sender] += calculateRepuationReward(reputationStakedAmount) + reputationStakedAmount;
+        } else {
+            reputationScore[msg.sender] -= calculateRepuationReward(reputationStakedAmount) + reputationStakedAmount;
         }
     }
 
