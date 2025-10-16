@@ -63,11 +63,12 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
     event ContentSubmitted(uint256 indexed Id, address indexed author);
     event Voted(uint256 indexed Id, address indexed user);
     event SubmissionBoosted(address indexed user, uint256 indexed Id, uint256 boostAmount);
-    event SubmissionFinalized(uint256 indexed Id, SubmissionStatus indexed status, uint256 rewardAmount);
+    event SubmissionFinalized(uint256 indexed Id, SubmissionStatus indexed status);
 
     // Constants
     uint256 public constant VOTE_STAKE_AMOUNT_MIN = 5;
     uint256 public constant VOTE_STAKE_AMOUNT_MAX = 50;
+    uint256 public constant SUBMISSION_COLLATERAL = 25;
     uint256 public minVoteCountForReview = 100;
 
     // Initializer
@@ -85,6 +86,11 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
     // Public and External functions
 
     function submitContent(bytes32 _contentHash) public returns (uint256 id) {
+        uint256 authorReputation = getReputationScore(msg.sender);
+        require(authorReputation >= SUBMISSION_COLLATERAL, "DKP: Insufficient reputation for collateral");
+
+        reputationScore[msg.sender] = authorReputation - SUBMISSION_COLLATERAL;
+
         uint256 newId = _idCounter++;
         Submission storage s = submissions[newId];
 
@@ -155,10 +161,16 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
         Submission storage s = submissions[submissionId];
         require(msg.sender == s.author, "DKP: Not the author");
         require(s.rewardClaimed == false, "DKP: Reward already claimed");
-        require(s.status == SubmissionStatus.Verified, "DKP: Submission not verified");
+        require(s.status == SubmissionStatus.InReview, "DKP: Submission not verified");
+
+        uint256 reward;
 
         if (block.timestamp >= s.reviewEndTime) {
             finalizeVote(submissionId);
+            if (s.status == SubmissionStatus.Verified) {
+                reward = 50 ether;
+                dkpToken.transfer(s.author, reward);
+            }
         } else {
             require(false, "DKP: Review period not over");
         }
@@ -222,19 +234,15 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
         Submission storage s = submissions[submissionId];
         require(s.status == SubmissionStatus.InReview, "DKP: Not in review");
         require(block.timestamp >= s.reviewEndTime, "DKP: Review period not over");
-        uint256 reward;
 
         if (s.upVotes > s.downVotes) {
             s.status = SubmissionStatus.Verified;
             reputationScore[s.author] += 50;
-
-            reward = 50 ether;
-            dkpToken.transfer(s.author, reward);
         } else {
             s.status = SubmissionStatus.Rejected;
         }
 
-        emit SubmissionFinalized(submissionId, s.status, reward);
+        emit SubmissionFinalized(submissionId, s.status);
     }
 
     // -- Upgradable Functionality --
