@@ -194,8 +194,6 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
 
         if (votedCorrectly) {
             reputationScore[msg.sender] += calculateRepuationReward(reputationStakedAmount) + reputationStakedAmount;
-        } else {
-            reputationScore[msg.sender] -= calculateRepuationReward(reputationStakedAmount) + reputationStakedAmount;
         }
     }
 
@@ -238,6 +236,7 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
         if (s.upVotes > s.downVotes) {
             s.status = SubmissionStatus.Verified;
             reputationScore[s.author] += 50;
+            reputationScore[s.author] += SUBMISSION_COLLATERAL;
         } else {
             s.status = SubmissionStatus.Rejected;
         }
