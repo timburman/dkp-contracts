@@ -161,19 +161,30 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
         Submission storage s = submissions[submissionId];
         require(msg.sender == s.author, "DKP: Not the author");
         require(s.rewardClaimed == false, "DKP: Reward already claimed");
-        require(s.status == SubmissionStatus.InReview, "DKP: Submission not verified");
+        require(s.status == SubmissionStatus.Verified, "DKP: Submission not verified");
 
         uint256 reward;
 
-        if (block.timestamp >= s.reviewEndTime) {
-            finalizeVote(submissionId);
-            if (s.status == SubmissionStatus.Verified) {
-                reward = 50 ether;
-                dkpToken.transfer(s.author, reward);
-            }
+        
+        reward = 50 ether;
+        dkpToken.transfer(s.author, reward);
+        s.rewardClaimed = true;
+    }
+
+    function finalizeVote(uint256 submissionId) external {
+        Submission storage s = submissions[submissionId];
+        require(s.status == SubmissionStatus.InReview, "DKP: Not in review");
+        require(block.timestamp >= s.reviewEndTime, "DKP: Review period not over");
+
+        if (s.upVotes > s.downVotes) {
+            s.status = SubmissionStatus.Verified;
+            reputationScore[s.author] += 50;
+            reputationScore[s.author] += SUBMISSION_COLLATERAL;
         } else {
-            require(false, "DKP: Review period not over");
+            s.status = SubmissionStatus.Rejected;
         }
+
+        emit SubmissionFinalized(submissionId, s.status);
     }
 
     function reclaimReputation(uint256 submissionId) external {
@@ -228,21 +239,6 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
     }
 
     // -- Internal Functions --
-    function finalizeVote(uint256 submissionId) internal {
-        Submission storage s = submissions[submissionId];
-        require(s.status == SubmissionStatus.InReview, "DKP: Not in review");
-        require(block.timestamp >= s.reviewEndTime, "DKP: Review period not over");
-
-        if (s.upVotes > s.downVotes) {
-            s.status = SubmissionStatus.Verified;
-            reputationScore[s.author] += 50;
-            reputationScore[s.author] += SUBMISSION_COLLATERAL;
-        } else {
-            s.status = SubmissionStatus.Rejected;
-        }
-
-        emit SubmissionFinalized(submissionId, s.status);
-    }
 
     // -- Upgradable Functionality --
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
