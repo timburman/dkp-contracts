@@ -35,7 +35,6 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
         uint256 totalVoteWeight;
         uint256 reviewEndTime;
         bool rewardClaimed;
-        SubmissionStatus status;
     }
 
     uint256 private _idCounter;
@@ -114,11 +113,11 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
         require(voteWeight <= userReputationScore, "DKP: Not enough reputation");
 
         Submission storage s = submissions[submissionId];
-
-        require(s.id == submissionId && s.id != 0, "Invalid Submission Id");
+        SubmissionStatus currentStatus = getSubmissionStatus(submissionId);
+        require(s.author != address(0), "DKP: Invalid Submission Id");
         require(hasVoted[submissionId][msg.sender] == false, "Already Voted");
         require(
-            s.status == SubmissionStatus.Pending || s.status == SubmissionStatus.InReview, "DKP: Voting period is over"
+            currentStatus == SubmissionStatus.Pending || currentStatus == SubmissionStatus.InReview, "DKP: Voting period is over"
         );
 
         userReputationScore -= voteWeight;
@@ -135,10 +134,9 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
             s.downVotes += voteWeight;
         }
 
-        if (s.status == SubmissionStatus.Pending) {
+        if (currentStatus == SubmissionStatus.Pending) {
             s.totalVoteWeight += voteWeight;
             if (s.totalVoteWeight >= minVoteCountForReview) {
-                s.status = SubmissionStatus.InReview;
                 s.reviewEndTime = block.timestamp + 7 days;
             }
         }
@@ -147,8 +145,8 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
     }
 
     function boost(uint256 submissionId, uint256 boostAmount) external nonReentrant {
+        require(submissions[submissionId].author != address(0), "DKP: Invalid Submission Id");
         require(dkpToken.allowance(msg.sender, address(this)) >= boostAmount, "Not enough tokens approved");
-
         require(dkpToken.transferFrom(msg.sender, address(this), boostAmount), "Transfer Failed");
 
         Submission storage s = submissions[submissionId];
@@ -157,40 +155,23 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
         emit SubmissionBoosted(msg.sender, submissionId, boostAmount);
     }
 
-    function claimRewards(uint256 submissionId) external {
+    function claimRewards(uint256 submissionId) external nonReentrant{
         Submission storage s = submissions[submissionId];
         require(msg.sender == s.author, "DKP: Not the author");
         require(s.rewardClaimed == false, "DKP: Reward already claimed");
-        require(s.status == SubmissionStatus.Verified, "DKP: Submission not verified");
+        require(getSubmissionStatus(submissionId) == SubmissionStatus.Verified, "DKP: Submission not verified");
 
         uint256 reward;
 
-        
+        s.rewardClaimed = true;
         reward = 50 ether;
         dkpToken.transfer(s.author, reward);
-        s.rewardClaimed = true;
-    }
-
-    function finalizeVote(uint256 submissionId) external {
-        Submission storage s = submissions[submissionId];
-        require(s.status == SubmissionStatus.InReview, "DKP: Not in review");
-        require(block.timestamp >= s.reviewEndTime, "DKP: Review period not over");
-
-        if (s.upVotes > s.downVotes) {
-            s.status = SubmissionStatus.Verified;
-            reputationScore[s.author] += 50;
-            reputationScore[s.author] += SUBMISSION_COLLATERAL;
-        } else {
-            s.status = SubmissionStatus.Rejected;
-        }
-
-        emit SubmissionFinalized(submissionId, s.status);
     }
 
     function reclaimReputation(uint256 submissionId) external {
-        Submission storage s = submissions[submissionId];
+        SubmissionStatus currentStatus = getSubmissionStatus(submissionId);
         require(
-            s.status == SubmissionStatus.Verified || s.status == SubmissionStatus.Rejected,
+            currentStatus == SubmissionStatus.Verified || currentStatus == SubmissionStatus.Rejected,
             "DKP: Submission not finalized"
         );
 
@@ -198,8 +179,8 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
         require(reputationStakedAmount > 0, "DKP: No reputation staked");
 
         VoteChoice userVote = userVotes[submissionId][msg.sender];
-        bool votedCorrectly = (s.status == SubmissionStatus.Verified && userVote == VoteChoice.Up)
-            || (s.status == SubmissionStatus.Rejected && userVote == VoteChoice.Down);
+        bool votedCorrectly = (currentStatus == SubmissionStatus.Verified && userVote == VoteChoice.Up)
+            || (currentStatus == SubmissionStatus.Rejected && userVote == VoteChoice.Down);
 
         lockedReputation[submissionId][msg.sender] = 0;
 
@@ -236,6 +217,30 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
         uint256 bonusPercentage = p1 - ((reputationStake - x1) * (p1 - p2)) / (x2 - x1);
 
         bonusAmount = (reputationStake * bonusPercentage) / 10000;
+    }
+
+    function getSubmissionStatus(uint submissionId) public view returns(SubmissionStatus) {
+
+        Submission storage s = submissions[submissionId];
+        require(s.author != address(0), "DKP: Invalid Submission Id");
+
+        if ( s.rewardClaimed ) {
+            return SubmissionStatus.Claimed;
+        }
+
+        if (s.reviewEndTime == 0) {
+            return SubmissionStatus.Pending;
+        }
+
+        if (block.timestamp < s.reviewEndTime ) {
+            return SubmissionStatus.Pending;
+        }
+
+        if (s.upVotes > s.downVotes) {
+            return SubmissionStatus.Verified;
+        } else {
+            return SubmissionStatus.Rejected;
+        }
     }
 
     // -- Internal Functions --
