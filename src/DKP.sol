@@ -117,9 +117,11 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
         require(s.author != address(0), "DKP: Invalid Submission Id");
         require(hasVoted[submissionId][msg.sender] == false, "Already Voted");
         require(
-            currentStatus == SubmissionStatus.Pending || currentStatus == SubmissionStatus.InReview, "DKP: Voting period is over"
+            currentStatus == SubmissionStatus.Pending || currentStatus == SubmissionStatus.InReview,
+            "DKP: Voting period is over"
         );
 
+        hasVoted[submissionId][msg.sender] = true;
         userReputationScore -= voteWeight;
 
         reputationScore[msg.sender] = userReputationScore;
@@ -141,6 +143,7 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
             }
         }
 
+        voterVoteCount[msg.sender]++;
         emit Voted(submissionId, msg.sender);
     }
 
@@ -155,7 +158,7 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
         emit SubmissionBoosted(msg.sender, submissionId, boostAmount);
     }
 
-    function claimRewards(uint256 submissionId) external nonReentrant{
+    function claimRewards(uint256 submissionId) external nonReentrant {
         Submission storage s = submissions[submissionId];
         require(msg.sender == s.author, "DKP: Not the author");
         require(s.rewardClaimed == false, "DKP: Reward already claimed");
@@ -219,12 +222,11 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
         bonusAmount = (reputationStake * bonusPercentage) / 10000;
     }
 
-    function getSubmissionStatus(uint submissionId) public view returns(SubmissionStatus) {
-
+    function getSubmissionStatus(uint256 submissionId) public view returns (SubmissionStatus) {
         Submission storage s = submissions[submissionId];
         require(s.author != address(0), "DKP: Invalid Submission Id");
 
-        if ( s.rewardClaimed ) {
+        if (s.rewardClaimed) {
             return SubmissionStatus.Claimed;
         }
 
@@ -232,8 +234,8 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
             return SubmissionStatus.Pending;
         }
 
-        if (block.timestamp < s.reviewEndTime ) {
-            return SubmissionStatus.Pending;
+        if (block.timestamp < s.reviewEndTime) {
+            return SubmissionStatus.InReview;
         }
 
         if (s.upVotes > s.downVotes) {
