@@ -248,7 +248,7 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
     // -- Internal Functions --
 
     // -- Owner Functions --
-    function supplyReputation(address user) external onlyOwner{
+    function supplyReputation(address user) external onlyOwner {
         reputationScore[user] += 25;
     }
 
