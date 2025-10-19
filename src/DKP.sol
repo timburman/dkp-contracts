@@ -63,6 +63,7 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
     event Voted(uint256 indexed id, address indexed user);
     event SubmissionBoosted(address indexed user, uint256 indexed id, uint256 boostAmount);
     event SubmissionFinalized(uint256 indexed id, SubmissionStatus indexed status);
+    event ReclaimedReputation(uint256 indexed id, address indexed user, uint256 reputationReclaimed);
 
     // Constants
     uint256 public constant VOTE_STAKE_AMOUNT_MIN = 5;
@@ -167,29 +168,18 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
         uint256 reward;
 
         s.rewardClaimed = true;
+        reputationScore[msg.sender] += 50;
         reward = 50 ether;
         require(dkpToken.transfer(s.author, reward), "DKP: Token transfer failed");
     }
 
     function reclaimReputation(uint256 submissionId) external {
-        SubmissionStatus currentStatus = getSubmissionStatus(submissionId);
-        require(
-            currentStatus == SubmissionStatus.Verified || currentStatus == SubmissionStatus.Rejected,
-            "DKP: Submission not finalized"
-        );
-
-        uint256 reputationStakedAmount = lockedReputation[submissionId][msg.sender];
-        require(reputationStakedAmount > 0, "DKP: No reputation staked");
-
-        VoteChoice userVote = userVotes[submissionId][msg.sender];
-        bool votedCorrectly = (currentStatus == SubmissionStatus.Verified && userVote == VoteChoice.Up)
-            || (currentStatus == SubmissionStatus.Rejected && userVote == VoteChoice.Down);
-
+        
+        uint256 reputationReturn = checkReputationReclaim(submissionId, msg.sender);
         lockedReputation[submissionId][msg.sender] = 0;
+        reputationScore[msg.sender] += reputationReturn;
 
-        if (votedCorrectly) {
-            reputationScore[msg.sender] += calculateRepuationReward(reputationStakedAmount) + reputationStakedAmount;
-        }
+        emit ReclaimedReputation(submissionId, msg.sender, reputationReturn);
     }
 
     // -- View Functions --
@@ -243,6 +233,26 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
         } else {
             return SubmissionStatus.Rejected;
         }
+    }
+
+    function checkReputationReclaim(uint256 submissionId, address user)
+        public
+        view
+        returns (uint256 reputationReturn)
+    {
+        SubmissionStatus currentStatus = getSubmissionStatus(submissionId);
+        require(
+            currentStatus == SubmissionStatus.Verified || currentStatus == SubmissionStatus.Rejected,
+            "DKP: Submission not finalized"
+        );
+        uint256 reputationStakedAmount = lockedReputation[submissionId][user];
+        require(reputationStakedAmount > 0, "DKP: No reputation staked");
+        VoteChoice userVote = userVotes[submissionId][user];
+        bool votedCorrectly = (currentStatus == SubmissionStatus.Verified && userVote == VoteChoice.Up)
+            || (currentStatus == SubmissionStatus.Rejected && userVote == VoteChoice.Down);
+        require(votedCorrectly, "DKP: Voted incorrectly");
+
+        reputationReturn = calculateRepuationReward(reputationStakedAmount) + reputationStakedAmount;
     }
 
     // -- Internal Functions --
