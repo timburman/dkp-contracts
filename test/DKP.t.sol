@@ -15,6 +15,7 @@ contract DKPTest is Test {
 
     event ContentSubmitted(uint256 indexed id, address indexed author);
     event Voted(uint256 indexed id, address indexed user);
+    event ReclaimedReputation(uint256 indexed id, address indexed user, uint256 reputationReclaimed);
 
     function setUp() public {
         dkp = new DKP();
@@ -36,12 +37,12 @@ contract DKPTest is Test {
         id = dkp.submitContent(_contentHash);
     }
 
-    function voteForReview(uint256 submissionId) public {
+    function voteForReview(uint256 submissionId, bool isUpVote) public {
         uint256 seed = 57;
 
         for (uint256 i = 0; i < 20; i++) {
             vm.prank(address(uint160(uint256(keccak256(abi.encode(seed, i))))));
-            dkp.vote(submissionId, 5, true);
+            dkp.vote(submissionId, 5, isUpVote);
         }
     }
 
@@ -63,6 +64,7 @@ contract DKPTest is Test {
         assertEq(id, s.id);
         assertEq(_contentHash, s.contentHash);
         assertEq(user, s.author);
+        assertEq(dkp.reputationScore(user), 0);
     }
 
     function test_SubmissionEmit() public {
@@ -126,5 +128,61 @@ contract DKPTest is Test {
         DKP.SubmissionStatus currentStatus = dkp.getSubmissionStatus(id);
         DKP.SubmissionStatus expectedStatus = DKP.SubmissionStatus.InReview;
         assertEq(uint256(currentStatus), uint256(expectedStatus));
+    }
+
+    function test_submissionColletralReturned() public {
+        uint256 id = submissionOfContent();
+
+        voteForReview(id, true);
+
+        skip(7 days);
+
+        assertEq(uint256(dkp.getSubmissionStatus(id)), uint256(DKP.SubmissionStatus.Verified));
+
+        vm.prank(user);
+        dkp.claimRewards(id);
+        assertEq(uint256(dkp.getSubmissionStatus(id)), uint256(DKP.SubmissionStatus.Claimed));
+
+        assertEq(dkpToken.balanceOf(user), 50 ether);
+        assertEq(dkp.getReputationScore(user), 50);
+    }
+
+    function test_FailClaimRewardsOnDownVote() public {
+        uint256 id = submissionOfContent();
+        voteForReview(id, false);
+
+        skip(7 days);
+
+        assertEq(uint256(dkp.getSubmissionStatus(id)), uint256(DKP.SubmissionStatus.Rejected));
+
+        vm.prank(user);
+        vm.expectRevert("DKP: Submission not verified");
+        dkp.claimRewards(id);
+    }
+
+    function test_claimReputationBack() public {
+        uint256 id = submissionOfContent();
+        voteForReview(id, true);
+
+        skip(7 days);
+
+        vm.prank(address(uint160(uint256(keccak256(abi.encode(57, 1))))));
+        vm.expectEmit();
+        emit ReclaimedReputation(id, address(uint160(uint256(keccak256(abi.encode(57, 1))))), 7);
+        dkp.reclaimReputation(id);
+    }
+
+    function test_FailClaimReputationBack() public {
+        uint256 id = submissionOfContent();
+        voteForReview(id, true);
+
+        vm.prank(voter1);
+        dkp.vote(id, 5, false);
+
+        skip(7 days);
+
+        vm.prank(voter1);
+        vm.expectRevert();
+        dkp.reclaimReputation(id);
     }
 }
