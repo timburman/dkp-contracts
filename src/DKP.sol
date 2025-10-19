@@ -174,7 +174,6 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
     }
 
     function reclaimReputation(uint256 submissionId) external {
-        
         uint256 reputationReturn = checkReputationReclaim(submissionId, msg.sender);
         lockedReputation[submissionId][msg.sender] = 0;
         reputationScore[msg.sender] += reputationReturn;
@@ -215,10 +214,6 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
     function getSubmissionStatus(uint256 submissionId) public view returns (SubmissionStatus) {
         Submission storage s = submissions[submissionId];
         require(s.author != address(0), "DKP: Invalid Submission Id");
-
-        if (s.rewardClaimed) {
-            return SubmissionStatus.Claimed;
-        }
 
         if (s.reviewEndTime == 0) {
             return SubmissionStatus.Pending;
