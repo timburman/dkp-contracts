@@ -141,7 +141,9 @@ contract DKPTest is Test {
 
         vm.prank(user);
         dkp.claimRewards(id);
-        assertEq(uint256(dkp.getSubmissionStatus(id)), uint256(DKP.SubmissionStatus.Claimed));
+        DKP.Submission memory s = dkp.getSubmissions(id);
+
+        assertEq(s.rewardClaimed, true);
 
         assertEq(dkpToken.balanceOf(user), 50 ether);
         assertEq(dkp.getReputationScore(user), 50);
@@ -166,10 +168,14 @@ contract DKPTest is Test {
 
         skip(7 days);
 
-        vm.prank(address(uint160(uint256(keccak256(abi.encode(57, 1))))));
+        vm.startPrank(address(uint160(uint256(keccak256(abi.encode(57, 1))))));
         vm.expectEmit();
         emit ReclaimedReputation(id, address(uint160(uint256(keccak256(abi.encode(57, 1))))), 7);
         dkp.reclaimReputation(id);
+
+        vm.expectRevert();
+        dkp.reclaimReputation(id);
+        vm.stopPrank();
     }
 
     function test_FailClaimReputationBack() public {
