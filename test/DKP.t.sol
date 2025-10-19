@@ -36,6 +36,15 @@ contract DKPTest is Test {
         id = dkp.submitContent(_contentHash);
     }
 
+    function voteForReview(uint256 submissionId) public {
+        uint256 seed = 57;
+
+        for (uint256 i = 0; i < 20; i++) {
+            vm.prank(address(uint160(uint256(keccak256(abi.encode(seed, i))))));
+            dkp.vote(submissionId, 5, true);
+        }
+    }
+
     function test_IdCounter() public {
         assertEq(dkp.getCurrentId(), 1);
 
@@ -105,5 +114,17 @@ contract DKPTest is Test {
         vm.prank(voter1);
         vm.expectRevert("DKP: Invalid Submission Id");
         dkp.vote(randomId, 5, true);
+    }
+
+    function test_minVoteCountForReview(uint256 seed) public {
+        uint256 id = submissionOfContent();
+
+        for (uint256 i = 0; i < 20; i++) {
+            vm.prank(address(uint160(uint256(keccak256(abi.encode(seed, i))) | 1)));
+            dkp.vote(id, 5, true);
+        }
+        DKP.SubmissionStatus currentStatus = dkp.getSubmissionStatus(id);
+        DKP.SubmissionStatus expectedStatus = DKP.SubmissionStatus.InReview;
+        assertEq(uint256(currentStatus), uint256(expectedStatus));
     }
 }
