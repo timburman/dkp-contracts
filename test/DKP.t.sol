@@ -22,13 +22,14 @@ contract DKPTest is Test {
         dkpToken = new DKPToken();
 
         dkpToken.initialize(owner);
-        dkp.initialize(owner, address(dkpToken));
+        dkp.initialize(owner);
 
-        vm.prank(owner);
+        vm.startPrank(owner);
         dkp.supplyReputation(user);
 
-        vm.prank(owner);
+        dkp.setDKPToken(address(dkpToken));
         dkpToken.mint(address(dkp), 1000 ether);
+        vm.stopPrank();
     }
 
     function submissionOfContent() public returns (uint256 id) {
