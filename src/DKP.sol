@@ -72,11 +72,13 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
     uint256 public minVoteCountForReview = 100;
 
     // Initializer
-    function initialize(address initialOwner) public initializer {
+    function initialize(address initialOwner, address dkpTokenAddress) public initializer {
         require(initialOwner != address(0), "Address cannot be 0");
+        require(dkpTokenAddress != address(0), "Address cannot be 0");
         __Ownable_init(initialOwner);
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
+        dkpToken = DKPToken(dkpTokenAddress);
         _idCounter = 1;
     }
 
@@ -252,11 +254,6 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
     // -- Owner Functions --
     function supplyReputation(address user) external onlyOwner {
         reputationScore[user] += 25;
-    }
-
-    function setDKPToken(address dkpTokenAddress) external onlyOwner {
-        require(address(dkpToken) == address(0), "Token address already set");
-        dkpToken = DKPToken(dkpTokenAddress);
     }
 
     // -- Upgradable Functionality --
