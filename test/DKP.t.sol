@@ -22,12 +22,11 @@ contract DKPTest is Test {
         dkpToken = new DKPToken();
 
         dkpToken.initialize(owner);
-        dkp.initialize(owner);
+        dkp.initialize(owner, address(dkpToken));
 
         vm.startPrank(owner);
         dkp.supplyReputation(user);
 
-        dkp.setDKPToken(address(dkpToken));
         dkpToken.mint(address(dkp), 1000 ether);
         vm.stopPrank();
     }
@@ -88,6 +87,7 @@ contract DKPTest is Test {
 
         assertEq(s.upVotes, 10);
         assertEq(s.downVotes, 0);
+        assertEq(uint256(dkp.getSubmissionStatus(id)), uint256(DKP.SubmissionStatus.Pending));
     }
 
     function test_VoteEmit() public {
