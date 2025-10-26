@@ -256,6 +256,10 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
         reputationScore[user] += 25;
     }
 
+    function setMinVoteCountForReview(uint256 _newCount) external onlyOwner {
+        minVoteCountForReview = _newCount;
+    }
+
     // -- Upgradable Functionality --
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 }
