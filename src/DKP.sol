@@ -58,6 +58,9 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
     // Mapping to store the total votes of each voter
     mapping(address => uint256) public voterVoteCount;
 
+    // Mapping to store the submissions ids of the author
+    mapping(address => uint256[]) public userSubmissions;
+
     // -- Events --
     event ContentSubmitted(uint256 indexed id, address indexed author);
     event Voted(uint256 indexed id, address indexed user);
@@ -97,6 +100,8 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
         s.contentHash = _contentHash;
         s.author = msg.sender;
         s.timestamp = block.timestamp;
+
+        userSubmissions[msg.sender].push(newId);
 
         emit ContentSubmitted(newId, msg.sender);
 
@@ -190,7 +195,7 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
     }
 
     function getReputationScore(address user) public view returns (uint256) {
-        if (reputationScore[user] == 0 && voterVoteCount[user] == 0) {
+        if (reputationScore[user] == 0 && voterVoteCount[user] == 0 && userSubmissions[user].length == 0) {
             return 10;
         }
 
@@ -244,14 +249,12 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
         VoteChoice userVote = userVotes[submissionId][user];
         bool votedCorrectly = (currentStatus == SubmissionStatus.Verified && userVote == VoteChoice.Up)
             || (currentStatus == SubmissionStatus.Rejected && userVote == VoteChoice.Down);
-        
+
         if (votedCorrectly) {
             reputationReturn = calculateRepuationReward(reputationStakedAmount) + reputationStakedAmount;
-        }
-        else {
+        } else {
             reputationReturn = 0;
         }
-        
     }
 
     // -- Internal Functions --
