@@ -188,8 +188,6 @@ contract DKPTest is Test {
 
         skip(7 days);
 
-        vm.prank(voter1);
-        vm.expectRevert();
-        dkp.reclaimReputation(id);
+        assertEq(dkp.checkReputationReclaim(id, voter1), 0);
     }
 }
