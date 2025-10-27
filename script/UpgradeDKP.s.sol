@@ -8,7 +8,6 @@ contract UpgradeDKP is Script {
     address public constant DKP_PROXY_ADDRESS = 0x6789E70ada20C853E12b8bae36085e60FeaAE7Eb;
 
     function run() external {
-
         vm.startBroadcast();
 
         DKP newImplementation = new DKP();
@@ -19,8 +18,11 @@ contract UpgradeDKP is Script {
         proxy.upgradeToAndCall(address(newImplementation), bytes(""));
         console.log("DKP Proxy has been upgraded");
 
+        if (proxy.minVoteCountForReview() == 0) {
+            proxy.setMinVoteCountForReview(100);
+            console.log("DKP minVoteCountForReview changed to 100");
+        }
 
         vm.stopBroadcast();
-
     }
 }
