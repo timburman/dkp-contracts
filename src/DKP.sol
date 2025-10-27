@@ -244,9 +244,14 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
         VoteChoice userVote = userVotes[submissionId][user];
         bool votedCorrectly = (currentStatus == SubmissionStatus.Verified && userVote == VoteChoice.Up)
             || (currentStatus == SubmissionStatus.Rejected && userVote == VoteChoice.Down);
-        require(votedCorrectly, "DKP: Voted incorrectly");
-
-        reputationReturn = calculateRepuationReward(reputationStakedAmount) + reputationStakedAmount;
+        
+        if (votedCorrectly) {
+            reputationReturn = calculateRepuationReward(reputationStakedAmount) + reputationStakedAmount;
+        }
+        else {
+            reputationReturn = 0;
+        }
+        
     }
 
     // -- Internal Functions --
