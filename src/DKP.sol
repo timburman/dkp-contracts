@@ -61,11 +61,12 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
     // Mapping to store the submissions ids of the author
     mapping(address => uint256[]) public userSubmissions;
 
+    mapping(address => uint256[]) public userVotedOnSubmissions;
+
     // -- Events --
     event ContentSubmitted(uint256 indexed id, address indexed author);
     event Voted(uint256 indexed id, address indexed user);
     event SubmissionBoosted(address indexed user, uint256 indexed id, uint256 boostAmount);
-    event SubmissionFinalized(uint256 indexed id, SubmissionStatus indexed status);
     event ReclaimedReputation(uint256 indexed id, address indexed user, uint256 reputationReclaimed);
 
     // Constants
@@ -127,6 +128,7 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
         );
 
         hasVoted[submissionId][msg.sender] = true;
+        userVotedOnSubmissions[msg.sender].push(submissionId);
         userReputationScore -= voteWeight;
 
         reputationScore[msg.sender] = userReputationScore;
