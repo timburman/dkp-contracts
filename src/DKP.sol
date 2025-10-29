@@ -26,7 +26,7 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
 
     struct Submission {
         uint256 id;
-        bytes32 contentHash;
+        string contentId;
         address author;
         uint256 timestamp;
         uint256 upVotes;
@@ -88,7 +88,7 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
 
     // Public and External functions
 
-    function submitContent(bytes32 _contentHash) public returns (uint256 id) {
+    function submitContent(string memory _contentId) public returns (uint256 id) {
         uint256 authorReputation = getReputationScore(msg.sender);
         require(authorReputation >= SUBMISSION_COLLATERAL, "DKP: Insufficient reputation for collateral");
 
@@ -98,7 +98,7 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
         Submission storage s = submissions[newId];
 
         s.id = newId;
-        s.contentHash = _contentHash;
+        s.contentId = _contentId;
         s.author = msg.sender;
         s.timestamp = block.timestamp;
 
