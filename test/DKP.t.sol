@@ -32,7 +32,7 @@ contract DKPTest is Test {
     }
 
     function submissionOfContent() public returns (uint256 id) {
-        bytes32 _contentHash = keccak256("Lalala");
+        string memory _contentHash = "Lalala";
         vm.prank(user);
         id = dkp.submitContent(_contentHash);
     }
@@ -50,19 +50,19 @@ contract DKPTest is Test {
         assertEq(dkp.getCurrentId(), 1);
 
         vm.prank(user);
-        dkp.submitContent(keccak256("Lalalal"));
+        dkp.submitContent("Lalalal");
 
         assertEq(dkp.getCurrentId(), 2);
     }
 
-    function test_SubmitContent(bytes32 _contentHash) public {
+    function test_SubmitContent(string memory _contentHash) public {
         vm.prank(user);
         uint256 id = dkp.submitContent(_contentHash);
 
         DKP.Submission memory s = dkp.getSubmissions(id);
 
         assertEq(id, s.id);
-        assertEq(_contentHash, s.contentHash);
+        assertEq(_contentHash, s.contentId);
         assertEq(user, s.author);
         assertEq(dkp.reputationScore(user), 0);
     }
@@ -71,7 +71,7 @@ contract DKPTest is Test {
         vm.prank(user);
         vm.expectEmit(true, true, false, false);
         emit ContentSubmitted(1, user);
-        dkp.submitContent(keccak256("Yolo"));
+        dkp.submitContent("Yolo");
     }
 
     function test_Voting() public {
