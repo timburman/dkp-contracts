@@ -5,7 +5,7 @@ import {Script, console} from "forge-std/Script.sol";
 import {DKP} from "../src/DKP.sol";
 
 contract UpgradeDKP is Script {
-    address public constant DKP_PROXY_ADDRESS = 0x6789E70ada20C853E12b8bae36085e60FeaAE7Eb;
+    address public constant DKP_PROXY_ADDRESS = 0x85De1717BE77A70f7bbDD1Ef4B3CD229D739fe94;
 
     function run() external {
         vm.startBroadcast();
