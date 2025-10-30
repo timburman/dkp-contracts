@@ -259,11 +259,19 @@ contract DKP is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, U
         }
     }
 
+    function getUserSubmissions(address user) external view returns (uint256[] memory) {
+        return userSubmissions[user];
+    }
+
+    function getUserVotedOnSubmissions(address user) external view returns (uint256[] memory) {
+        return userVotedOnSubmissions[user];
+    }
+
     // -- Internal Functions --
 
     // -- Owner Functions --
-    function supplyReputation(address user) external onlyOwner {
-        reputationScore[user] += 25;
+    function supplyReputation(address user, uint256 repoSupply) external onlyOwner {
+        reputationScore[user] += repoSupply;
     }
 
     function setMinVoteCountForReview(uint256 _newCount) external onlyOwner {
